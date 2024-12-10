@@ -1,32 +1,36 @@
 <?php
 
-namespace Inovanti\RSAValidator\Services;
+namespace InovantiBank\RSAValidator\Services;
 
+use Illuminate\Support\Facades\DB;
 use Exception;
-use Illuminate\Support\Facades\Log;
-use Inovanti\RSAValidator\Services\UserPublicKeyRepository;
 
 class RSAValidatorService
 {
-    protected $logger;
-    protected $repository;
-
-    public function __construct(UserPublicKeyRepository $repository)
+    public function decryptData($clientId, $encryptedData)
     {
-        $this->repository = $repository;
-    }
+        $publicKey = $this->getPublicKey($clientId);
 
-    public function decryptWithPublicKey(string $publicKey, string $base64Data): string
-    {
-        $decodedData = base64_decode($base64Data);
-
-        $result = '';
-        if (!openssl_public_decrypt($decodedData, $result, $publicKey)) {
-            Log::error('Decryption failed: Invalid public key or data');
-            throw new Exception('Decryption failed: Invalid public key or data');
+        if (!$publicKey) {
+            throw new Exception("Public key not found for client ID: $clientId");
         }
 
-        return $result;
+        $decodedData = base64_decode($encryptedData);
+        if (!openssl_public_decrypt($decodedData, $decryptedData, $publicKey)) {
+            throw new Exception("Failed to decrypt data with the provided public key.");
+        }
+
+        return $decryptedData;
+    }
+
+    private function getPublicKey($clientId)
+    {
+        if (config('rsa-validator.storage') === 'database') {
+            $client = DB::table('rsa_validator')->where('client_id', $clientId)->first();
+            return $client ? $client->public_key : null;
+        } else {
+            $path = config('rsa-validator.key_directory') . "/$clientId.pub";
+            return file_exists($path) ? file_get_contents($path) : null;
+        }
     }
 }
-
