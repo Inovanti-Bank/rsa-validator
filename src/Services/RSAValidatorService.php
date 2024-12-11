@@ -3,21 +3,39 @@
 namespace InovantiBank\RSAValidator\Services;
 
 use Illuminate\Support\Facades\DB;
-use Exception;
+use InovantiBank\RSAValidator\Exceptions\PublicKeyNotFoundException;
+use InovantiBank\RSAValidator\Exceptions\DecryptionFailedException;
+use InvalidArgumentException;
 
 class RSAValidatorService
 {
+    protected $tableName;
+
+    public function __construct()
+    {
+        $this->tableName = config('rsa-validator.table_name');
+
+        if (empty($this->tableName) || !is_string($this->tableName)) {
+            throw new InvalidArgumentException('The "table_name" configuration in rsa-validator.php must be a non-empty string.');
+        }
+
+        if (!DB::getSchemaBuilder()->hasTable($this->tableName)) {
+            throw new InvalidArgumentException("The table '{$this->tableName}' does not exist in the database. Please run migrations.");
+        }
+    }
+
     public function decryptData($clientId, $encryptedData)
     {
         $publicKey = $this->getPublicKey($clientId);
 
         if (!$publicKey) {
-            throw new Exception("Public key not found for client ID: $clientId");
+            throw new PublicKeyNotFoundException($clientId);
         }
 
         $decodedData = base64_decode($encryptedData);
-        if (!openssl_public_decrypt($decodedData, $decryptedData, $publicKey)) {
-            throw new Exception("Failed to decrypt data with the provided public key.");
+
+        if (!$decodedData || !openssl_public_decrypt($decodedData, $decryptedData, $publicKey)) {
+            throw new DecryptionFailedException();
         }
 
         return $decryptedData;
@@ -25,12 +43,7 @@ class RSAValidatorService
 
     private function getPublicKey($clientId)
     {
-        if (config('rsa-validator.storage') === 'database') {
-            $client = DB::table('rsa_validator')->where('client_id', $clientId)->first();
-            return $client ? $client->public_key : null;
-        } else {
-            $path = config('rsa-validator.key_directory') . "/$clientId.pub";
-            return file_exists($path) ? file_get_contents($path) : null;
-        }
+        $client = DB::table($this->tableName)->where('client_id', $clientId)->first();
+        return $client ? $client->public_key : null;
     }
 }
