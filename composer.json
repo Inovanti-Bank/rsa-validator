@@ -1,0 +1,45 @@
+{
+  "name": "inovanti-bank/rsa-validator",
+  "description": "Package for validation and decryption using RSA public keys (Private Key and Public Key)",
+  "type": "library",
+  "require": {
+    "php": "^8.0",
+    "illuminate/support": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "InovantiBank\\RSAValidator\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "InovantiBank\\RSAValidator\\Providers\\RSAValidatorServiceProvider"
+      ],
+      "aliases": {
+        "RSAValidator": "InovantiBank\\RSAValidator\\Facades\\RSAValidator"
+      }
+    }
+  },
+  "scripts": {
+    "test": "vendor/bin/phpunit"
+  },
+  "minimum-stability": "stable",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "inovanti Ip",
+      "email": "dev@inovanti.com.br"
+    }
+  ],
+  "require-dev": {
+    "laravel/framework": "^11.0",
+    "phpunit/phpunit": "11.5.x-dev",
+    "mockery/mockery": "2.0.x-dev"
+  }
+}
